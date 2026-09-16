@@ -1,162 +1,354 @@
-Markdown
 # Express Layered Monolith Boilerplate
 
-A production-ready Node.js & Express starter template built on a **4-Layer Architecture** (Presentation, Business, Persistence, and Database). Designed for maximum maintainability, testability, and operational observability with built-in generator tooling.
+A production-ready Node.js and Express starter template built around a **4-Layer Architecture**: Presentation, Business, Persistence, and Database/Infrastructure.
+
+Designed for **maintainability, testability, scalability, and operational observability**, with built-in module generation powered by Plop.js.
 
 ---
 
 ## Architecture Overview
 
-This project enforces a strict top-to-bottom one-way dependency flow. Business logic is completely decoupled from HTTP handlers and database connections.
+This project enforces a strict **top-to-bottom, one-way dependency flow**.
 
+Business logic remains decoupled from HTTP concerns, while persistence and infrastructure concerns are isolated from the application domain.
+
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                   Presentation Layer                    │
-│   (User Interface, HTTP Routes, Controllers, Specs)     │
+│   Routes • Controllers • Middlewares • HTTP Concerns    │
 └────────────────────────────┬────────────────────────────┘
-│
-▼
+                             │
+                             ▼
 ┌─────────────────────────────────────────────────────────┐
 │                     Business Layer                      │
-│     (Core Domain Logic, Use Cases, Middlewares)         │
+│        Domain Logic • Use Cases • Workflows             │
 └────────────────────────────┬────────────────────────────┘
-│
-▼
+                             │
+                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    Persistence Layer                    │
-│       (Data Access Objects, ORM / ODM Schemas)          │
+│                   Persistence Layer                     │
+│       Repositories • Models • Data Access Logic         │
 └────────────────────────────┬────────────────────────────┘
-│
-▼
+                             │
+                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│                     Database Layer                      │
-│         (Data Store, DB Config, Migrations)             │
-└────────────────────────────┴────────────────────────────┘
-
+│              Database / Infrastructure Layer            │
+│        Database • Configuration • Telemetry • Logs      │
+└─────────────────────────────────────────────────────────┘
+```
 
 ### Layer Responsibilities
 
-1. **Presentation Layer (`src/presentation/`)**
-   * **`routes/`**: Defines API endpoints and maps requests to controllers.
-   * **`controllers/`**: Extracts parameters from Express `req`/`res` objects, triggers business services, and returns HTTP status codes and responses.
-   * **`middlewares/`**: Handles request pipelines (validation, authentication, global error handling).
-2. **Business Layer (`src/services/`)**
-   * Contains pure domain rules, calculations, data transformations, and workflows.
-   * **Rule:** Completely unaware of Express or HTTP. Accepts and returns plain JavaScript objects or throws custom application errors.
-3. **Persistence Layer (`src/persistence/`)**
-   * **`models/`**: Mongoose / ODM schemas defining database structures.
-   * **`repositories/`**: Abstractions for direct data storage interactions.
-4. **Database / Infra Layer (`src/config/`)**
-   * Manages database connection pooling, environment validation, logging clients, and telemetry initialization.
+#### 1. Presentation Layer — `src/presentation/`
+
+Responsible for HTTP and Express-specific concerns.
+
+* **`routes/`** — Defines API endpoints and maps requests to controllers.
+* **`controllers/`** — Extracts data from Express `req`/`res` objects, invokes business services, and formats HTTP responses.
+* **`middlewares/`** — Handles request-level concerns such as validation, authentication, authorization, and error handling.
+
+#### 2. Business Layer — `src/services/`
+
+Contains the application's core business logic.
+
+* Domain rules
+* Calculations
+* Data transformations
+* Application workflows
+* Business validations
+
+**Architectural rule:** Services should remain unaware of Express, HTTP requests, and HTTP response objects.
+
+Services accept and return plain JavaScript objects and throw application-specific errors where necessary.
+
+#### 3. Persistence Layer — `src/persistence/`
+
+Responsible for data access and database-facing abstractions.
+
+* **`models/`** — Mongoose/ODM schemas representing persisted data.
+* **`repositories/`** — Encapsulates direct database interactions and provides a clean interface to the business layer.
+
+#### 4. Database / Infrastructure Layer — `src/config/`
+
+Responsible for application infrastructure and external technical concerns.
+
+* Database connections
+* Environment configuration
+* Logging
+* Telemetry initialization
+* Infrastructure clients
+* Connection pooling and related configuration
 
 ---
 
 ## Repository Structure
 
+```text
 my-layered-app/
-├── src/                          # Application source code
-│   ├── config/                   # Database & infrastructure setup
-│   │   ├── db.js                 # Mongoose connection logic
-│   │   ├── env.js                # Environment variable configuration
-│   │   └── logger.js             # Centralized logger setup
-│   ├── presentation/             # Presentation Layer
-│   │   ├── controllers/          # HTTP Controllers (req/res adapters)
-│   │   ├── routes/               # API Routes (v1/ versioned)
-│   │   └── middlewares/          # Custom Express middlewares
-│   ├── services/                 # Business Layer (Domain logic)
-│   ├── persistence/              # Persistence Layer
-│   │   ├── models/               # Mongoose Schemas
-│   │   └── repositories/         # Data Access Repositories
-│   ├── utils/                    # Common utilities & custom error classes
-│   │   └── errors/               # Custom AppError abstractions
-│   ├── app.js                    # Express app configuration & middleware pipeline
-│   └── server.js                 # HTTP server entry point & boot script
-├── templates/                    # Handlebars (.hbs) generator templates
-├── tests/                        # Automated unit & integration tests
-├── telemetry/                    # Prometheus & Loki monitoring configs
-├── docs/                         # OpenAPI / Swagger documentation
-├── client/                       # Frontend static assets
-├── dockerfile                    # Container definition
-├── docker-compose.yml            # Multi-service stack (App, DB, Loki, Prometheus)
-├── plopfile.js                   # Plop.js generator configuration
-├── .env                          # Local environment settings
-└── README.md                     # Project documentation
-
+├── src/
+│   ├── config/                    # Database & infrastructure setup
+│   │   ├── db.js                  # Mongoose connection logic
+│   │   ├── env.js                 # Environment configuration
+│   │   └── logger.js              # Centralized logger setup
+│   │
+│   ├── presentation/              # Presentation Layer
+│   │   ├── controllers/           # HTTP controllers
+│   │   ├── routes/                # API routes
+│   │   │   └── v1/                # Versioned API routes
+│   │   └── middlewares/            # Express middlewares
+│   │
+│   ├── services/                  # Business Layer
+│   │
+│   ├── persistence/               # Persistence Layer
+│   │   ├── models/                # Mongoose schemas
+│   │   └── repositories/          # Data access repositories
+│   │
+│   ├── utils/                     # Shared utilities
+│   │   └── errors/                # Custom application errors
+│   │
+│   ├── app.js                     # Express application configuration
+│   └── server.js                  # HTTP server entry point
+│
+├── templates/                     # Plop/Handlebars generator templates
+├── tests/                         # Unit & integration tests
+├── telemetry/                     # Prometheus & Loki configuration
+├── docs/                          # OpenAPI / Swagger documentation
+├── client/                        # Frontend/static assets
+│
+├── Dockerfile                     # Container definition
+├── docker-compose.yml             # Multi-service Docker stack
+├── plopfile.js                    # Plop.js generator configuration
+├── .env.example                   # Environment variable template
+└── README.md                      # Project documentation
+```
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
-* **Node.js**: `>= 18.x`
-* **MongoDB**: Local instance running on `27017` or a remote MongoDB URI
-* **Docker & Docker Compose** (Optional, for containerized execution)
+
+Before getting started, ensure you have:
+
+* **Node.js** `>= 18.x`
+* **MongoDB** running locally on port `27017` or a remote MongoDB instance
+* **Docker & Docker Compose** *(optional, for containerized execution)*
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/your-username/my-layered-app.git](https://github.com/your-username/my-layered-app.git)
-   cd my-layered-app
-Install dependencies:
+#### 1. Clone the repository
 
-Bash
+```bash
+git clone https://github.com/your-username/my-layered-app.git
+cd my-layered-app
+```
+
+#### 2. Install dependencies
+
+```bash
 npm install
-Configure environment variables:
+```
 
-Bash
-cp .env.example .env # Create .env and update values as needed
-Start the development server:
+#### 3. Configure environment variables
 
-Bash
+Create your local environment file from the provided example:
+
+```bash
+cp .env.example .env
+```
+
+Update `.env` with the appropriate values for your environment.
+
+> **Note:** Never commit your `.env` file or secrets to version control.
+
+#### 4. Start the development server
+
+```bash
 npm run dev
-Feature Generator (Plop.js)
+```
 
-To maintain consistent architectural standards, this repository includes an automated module generator powered by Plop.js.
+The application will start using the development configuration with hot reloading enabled.
 
-Generating a New Module
+---
 
-Run the generator command in your terminal:
+## Feature Generator
 
-Bash
+To maintain architectural consistency, this project includes an automated module generator powered by **Plop.js**.
+
+### Generating a New Module
+
+Run:
+
+```bash
 npm run g
-When prompted, enter your resource/module name (e.g., poll, user, or order). Plop automatically creates all 4 corresponding files simultaneously using pre-configured Handlebars templates:
+```
 
-src/presentation/controllers/<name>Controller.js
+Enter the name of your resource/module when prompted.
 
-src/services/<name>Service.js
+For example:
 
-src/presentation/routes/v1/<name>Routes.js
+```text
+poll
+user
+order
+```
 
-src/persistence/models/<PascalCaseName>.js
+The generator automatically creates the corresponding files using the configured Handlebars templates.
 
-Available Scripts
+For a module named `poll`, the generator creates:
 
-Script	Command	Description
-npm run dev	nodemon src/server.js	Starts dev server with hot reloading.
-npm start	node src/server.js	Starts production server instance.
-npm run g	plop	Triggers the interactive module generator.
-npm test	jest	Executes test suite across unit & integration layers.
-Deployment & Docker
+```text
+src/
+├── presentation/
+│   ├── controllers/
+│   │   └── pollController.js
+│   └── routes/
+│       └── v1/
+│           └── pollRoutes.js
+│
+├── services/
+│   └── pollService.js
+│
+└── persistence/
+    └── models/
+        └── Poll.js
+```
 
-Run the entire application stack (API server, MongoDB, Prometheus, and Loki) using Docker Compose:
+This helps ensure that new features follow the project's architectural conventions rather than introducing ad-hoc structures.
 
-Bash
-# Build and run containers in detached mode
-docker-compose up -d --build
+---
 
-# View operational application logs
-docker-compose logs -f app
-License
+## Available Scripts
 
-This project is licensed under the MIT License.
+| Command       | Description                                       |
+| ------------- | ------------------------------------------------- |
+| `npm run dev` | Starts the development server with hot reloading. |
+| `npm start`   | Starts the production server.                     |
+| `npm run g`   | Launches the interactive Plop module generator.   |
+| `npm test`    | Runs the Jest unit and integration test suites.   |
 
+---
 
-***
+## Testing
 
-### Next Steps
-1. Create a `README.md` file in your project root directory and paste the markdown content above into it.
-2. Commit the changes and push to GitHub:
-   ```bash
-   git add README.md
-   git commit -m "docs: add world class README documentation"
-   git push origin main
+Run the complete test suite with:
+
+```bash
+npm test
+```
+
+Tests are organized under:
+
+```text
+tests/
+├── unit/
+└── integration/
+```
+
+The goal is to keep business logic independently testable while using integration tests to verify interactions between application layers.
+
+---
+
+## API Documentation
+
+OpenAPI/Swagger documentation is maintained under:
+
+```text
+docs/
+```
+
+This provides a centralized reference for available API endpoints and their expected request/response structures.
+
+---
+
+## Observability
+
+The project includes an operational observability stack designed to support application monitoring and centralized logging.
+
+Current components include:
+
+* **Prometheus** — Metrics collection
+* **Loki** — Log aggregation
+* Application logging
+* Telemetry configuration
+
+Configuration is maintained under:
+
+```text
+telemetry/
+```
+
+---
+
+## Docker
+
+The entire application stack can be run using Docker Compose.
+
+### Build and start the stack
+
+```bash
+docker compose up -d --build
+```
+
+### View application logs
+
+```bash
+docker compose logs -f app
+```
+
+### Stop the stack
+
+```bash
+docker compose down
+```
+
+The Docker Compose environment can include:
+
+* Express application
+* MongoDB
+* Prometheus
+* Loki
+
+---
+
+## Architectural Principles
+
+This boilerplate is built around several core principles:
+
+### Separation of Concerns
+
+Each layer has a clearly defined responsibility.
+
+### Dependency Direction
+
+Dependencies flow from:
+
+```text
+Presentation
+     ↓
+Business
+     ↓
+Persistence
+     ↓
+Database / Infrastructure
+```
+
+Higher-level application logic should not depend directly on HTTP or database implementation details.
+
+### Testability
+
+Business logic is isolated from Express and database concerns, making services easier to unit test independently.
+
+### Consistency
+
+The Plop generator provides a standardized structure for introducing new modules and features.
+
+### Observability
+
+Logging, metrics, and telemetry are treated as first-class operational concerns rather than afterthoughts.
+
+---
+
+## License
+
+This project is licensed under the **MIT License**.
