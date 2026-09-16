@@ -1,0 +1,9 @@
+const {{pascalCase name}} = require('../persistence/models/{{pascalCase name}}');
+
+exports.getAll = async () => {
+  return await {{pascalCase name}}.find({});
+};
+
+exports.create = async (payload) => {
+  return await {{pascalCase name}}.create(payload);
+};

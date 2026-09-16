@@ -1,0 +1,11 @@
+const mongoose = require('mongoose');
+
+const {{camelCase name}}Schema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    status: { type: String, default: 'active' }
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model('{{pascalCase name}}', {{camelCase name}}Schema);
