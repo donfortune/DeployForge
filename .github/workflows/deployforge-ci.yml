@@ -1,0 +1,72 @@
+
+name: DeployForge Secure Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "Public GitHub repository (owner/repo)"
+        required: true
+        type: string
+      branch:
+        description: "Branch to build"
+        required: true
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Validate repository input
+        env:
+          REPOSITORY: ${{ inputs.repository }}
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          if [[ ! "$REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "Invalid repository. Use owner/repo."
+            exit 1
+          fi
+
+          if [[ ! "$BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] ||
+             [[ "$BRANCH" == -* ]] ||
+             [[ "$BRANCH" == *..* ]]; then
+            echo "Invalid branch name."
+            exit 1
+          fi
+
+      - name: Checkout submitted repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.branch }}
+          persist-credentials: false
+
+      - name: Verify Dockerfile exists
+        run: |
+          if [ ! -f Dockerfile ]; then
+            echo "Build failed: repository has no Dockerfile."
+            exit 1
+          fi
+
+      - name: Build container image
+        run: |
+          docker build \
+            --tag deployforge-test:${{ github.run_id }} \
+            .
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: deployforge-test:${{ github.run_id }}
+          scan-type: image
+          format: table
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
