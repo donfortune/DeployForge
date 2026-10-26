@@ -78,6 +78,15 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployforge-trivy-report
+          path: trivy-report.json
+          if-no-files-found: warn
+          retention-days: 7
+
       # Step 6: Security Gate
       # The workflow reaches this step even if Trivy finds vulnerabilities,
       # but deployment approval is still blocked.
