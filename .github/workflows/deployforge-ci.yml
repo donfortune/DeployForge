@@ -63,30 +63,41 @@ jobs:
             --tag deployforge-test:${{ github.run_id }} \
             .
 
-      # Step 5: Scan image with Trivy (Generates JSON report)
+      
       - name: Scan image with Trivy
         id: trivy_scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
           image-ref: deployforge-test:${{ github.run_id }}
           scan-type: image
           format: json
-          output: trivy-report.json
+          output: ${{ github.workspace }}/trivy-report.json
           vuln-type: os,library
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
 
-      # Step 6: Upload Trivy report as an artifact
+      - name: Verify Trivy report
+        if: always()
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/trivy-report.json" ]; then
+            echo "Trivy report exists."
+            ls -lh "$GITHUB_WORKSPACE/trivy-report.json"
+          else
+            echo "::warning::Trivy report was not generated."
+            find "$GITHUB_WORKSPACE" -maxdepth 2 -iname '*trivy*' -type f
+          fi
+
       - name: Upload Trivy report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: deployforge-trivy-report
-          path: trivy-report.json
+          path: ${{ github.workspace }}/trivy-report.json
           if-no-files-found: warn
           retention-days: 7
+
 
       # Step 7: Security Gate
       - name: Enforce DeployForge security policy
